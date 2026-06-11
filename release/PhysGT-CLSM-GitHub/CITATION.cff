@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+title: "PhysGT-CLSM: a physics-informed framework for annotation-free ground truth generation and mitochondria segmentation in confocal microscopy"
+message: "If you use this software, please cite the associated manuscript."
+type: software
+authors:
+  - family-names: "Author"
+    given-names: "Name"
+repository-code: "https://github.com/lby850115/PhysGT-CLSM"
+license: MIT
+date-released: 2026-06-11

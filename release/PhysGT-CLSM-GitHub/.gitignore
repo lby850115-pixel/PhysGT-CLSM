@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+outputs/
+predictions/
+predictions_34/
+figures/generated/
+results/generated/
+MITO DATA/
+MITO DATA_1/
+*.log
