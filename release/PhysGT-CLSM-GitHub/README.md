@@ -16,6 +16,14 @@ PhysGT-CLSM-GitHub/
 │   ├── morphology_34.py
 │   ├── stats_significance.py
 │   └── paper_figures.py
+├── baselines/
+│   ├── README.md
+│   ├── baseline_versions.yml
+│   ├── run_cellpose.py
+│   ├── run_mitosegnet_34.py
+│   ├── run_modl_34.py
+│   ├── run_nellie_style.py
+│   └── run_mitometer_style.py
 ├── data/
 │   ├── test_images/
 │   │   └── S086_roi.tif
@@ -96,6 +104,8 @@ python scripts/morphology_34.py
 python scripts/stats_significance.py
 python scripts/paper_figures.py
 ```
+
+Baseline comparison wrappers are documented in `baselines/`. Third-party source code, plugins and model weights are not redistributed; install them from official sources and use the wrappers to reproduce the manuscript comparison outputs.
 
 ## Main Physical Parameters
 
