@@ -77,6 +77,8 @@ Expected outputs:
 - `outputs/figures/*_physegt_clsm_overlay.png`: quality-control overlays
 - `outputs/results/physegt_clsm_stats.csv`: per-image summary
 
+For the included `S086_roi.tif` test image, the balanced default preset should detect approximately 44 instances. A representative output is included at `figures/S086_physgt_balanced_overlay.png`.
+
 ## Reproduce Manuscript Analyses
 
 The full 34-image analysis requires the complete microscopy dataset. The release package includes a minimal test image for code verification and compact result tables for manuscript traceability.
@@ -115,8 +117,21 @@ Baseline comparison wrappers are documented in `baselines/`. Third-party source 
 | Numerical aperture | 1.2 | Objective NA |
 | Wavelength | 488 nm | Mitochondrial channel setting used in the implementation |
 | PSF sigma | derived | `0.61 * wavelength / NA / 2.355 / pixel_size` |
-| Minimum marker distance | about 10 px | Mitochondrial length-scale prior |
-| Minimum object area | about 20 px2 | Diameter and minimum-length prior |
+
+## Real-Image Inference Defaults
+
+The synthetic self-validation uses sparse physics-generated tiles. Real CLSM mitochondria can form dense ring-like and network-like regions, where overly smooth watershed markers merge many structures into a few large instances. The default real-image inference preset therefore uses a balanced separation setting:
+
+| Argument | Default | Meaning |
+| --- | ---: | --- |
+| `--smooth_sigma` | 1.0 | Gaussian pre-smoothing before thresholding |
+| `--threshold_scale` | 1.35 | Multiplier applied to Triangle threshold |
+| `--close_radius` | 0 | Binary closing radius; `0` disables closing |
+| `--dist_sigma` | 1.2 | Distance-transform smoothing before marker detection |
+| `--min_distance` | 5 | Minimum watershed marker spacing in pixels |
+| `--min_area` | 10 | Minimum retained instance area in pixels |
+
+For more conservative network-preserving segmentation, increase `--dist_sigma` and `--min_distance`. For denser instance separation, decrease them cautiously and inspect overlays.
 
 ## Citation
 

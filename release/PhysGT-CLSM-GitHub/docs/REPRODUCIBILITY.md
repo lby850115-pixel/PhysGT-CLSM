@@ -8,6 +8,13 @@ conda activate physgt-clsm
 python src/physgt_clsm.py --img_dir data/test_images --out_pred outputs/predictions --out_fig outputs/figures --out_res outputs/results
 ```
 
+The command above uses the balanced real-image preset:
+
+```text
+smooth_sigma=1.0, threshold_scale=1.35, close_radius=0,
+dist_sigma=1.2, min_distance=5, min_area=10
+```
+
 Check that the following files are created:
 
 - `outputs/predictions/S086_roi.tif`

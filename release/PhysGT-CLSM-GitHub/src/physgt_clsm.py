@@ -43,6 +43,16 @@ _parser.add_argument('--out_res',  type=str, default=None,
                      help='Output results directory override')
 _parser.add_argument('--min_area', type=int, default=None,
                      help='Override minimum instance area (px²)')
+_parser.add_argument('--smooth_sigma', type=float, default=1.0,
+                     help='Gaussian pre-smoothing sigma for real-image inference')
+_parser.add_argument('--threshold_scale', type=float, default=1.35,
+                     help='Multiplier applied to the Triangle threshold')
+_parser.add_argument('--close_radius', type=int, default=0,
+                     help='Binary closing radius in pixels (0 disables closing)')
+_parser.add_argument('--dist_sigma', type=float, default=1.2,
+                     help='Gaussian smoothing sigma for distance-transform markers')
+_parser.add_argument('--min_distance', type=int, default=5,
+                     help='Minimum marker distance for watershed instance separation')
 _parser.add_argument('--build_dataset', action='store_true',
                      help='Build the optional synthetic train/val/test dataset after inference')
 _parser.add_argument('--help', action='store_true')
@@ -282,20 +292,22 @@ def segment_real_image(fp):
 
     # Gaussian pre-smooth: suppresses readout noise without broadening 2px structures.
     # Unsharp masking omitted — PSF is sub-pixel (0.876 px), so it amplifies noise.
-    smoothed = gaussian_filter(mito_norm, sigma=1.0)
+    smoothed = gaussian_filter(mito_norm, sigma=_args.smooth_sigma)
 
     # Triangle threshold: mitochondria occupy <5% of image area; Otsu underestimates
     # the threshold for such sparse foregrounds.
-    thresh = threshold_triangle(smoothed)
-    binary = binary_closing(smoothed > thresh, disk(1))
+    thresh = threshold_triangle(smoothed) * _args.threshold_scale
+    binary = smoothed > thresh
+    if _args.close_radius > 0:
+        binary = binary_closing(binary, disk(_args.close_radius))
 
     dist = distance_transform_edt(binary)
     # Smooth distance transform before peak detection: a 2px-wide rod produces a flat
     # ridge (max ≈1 px) that yields spurious peaks every min_dist pixels without smoothing.
-    dist_smooth = gaussian_filter(dist, sigma=3.0)
-    # min_distance based on minimum observable length (1 µm = 8.3 px), not diameter,
-    # because CLSM captures the lateral extent of mitochondria.
-    min_dist = max(10, int(MITO_LENGTH_MIN_PX * 1.2))
+    dist_smooth = gaussian_filter(dist, sigma=_args.dist_sigma)
+    # Real CLSM mitochondria can form dense contact regions. A 5 px marker spacing
+    # improves instance separation while retaining network-scale continuity.
+    min_dist = _args.min_distance
     coords = peak_local_max(dist_smooth, min_distance=min_dist, labels=binary)
     markers = np.zeros(binary.shape, dtype=np.int32)
     for idx, (r, c) in enumerate(coords, start=1):
@@ -303,7 +315,7 @@ def segment_real_image(fp):
 
     labeled_ws = watershed(-dist, markers, mask=binary)
 
-    MIN_AREA = _args.min_area if _args.min_area else max(20, int(MITO_LENGTH_MIN_PX * MITO_DIAM_PX * 0.5))
+    MIN_AREA = _args.min_area if _args.min_area else 10
     labeled_filt = np.zeros_like(labeled_ws, dtype=np.uint16)
     new_id = 1
     for iid in range(1, labeled_ws.max() + 1):
