@@ -12,7 +12,7 @@ input() call that runs when that file is imported.
 
 Output:
   results/synthetic_validation.csv          per-tile metrics
-  results/synthetic_validation_summary.txt  mean ± SD validation summary
+  results/synthetic_validation_summary.txt  mean +/- SD validation summary
 """
 
 import math, csv, warnings
@@ -32,7 +32,7 @@ OUT_RES.mkdir(parents=True, exist_ok=True)
 
 N_TILES = 100
 
-# ── Physics constants (from PhysGT_CLSM.py) ──────────────────────────────────
+# -- Physics constants (from PhysGT_CLSM.py) ----------------------------------
 PIXEL_NM      = 120.25
 NA            = 1.2
 WAVELENGTH    = 488.0
@@ -43,16 +43,16 @@ POISSON_SCALE = 80.0
 MITO_DIAM_NM       = 250.0
 MITO_DIAM_PX       = MITO_DIAM_NM / PIXEL_NM
 # In CLSM we observe the lateral extent (length), not the diameter.
-# Shortest observable mito ~1 µm; typical rod 1–3 µm = 8–25 px.
+# Shortest observable mito ~1 um; typical rod 1-3 um = 8-25 px.
 MITO_LENGTH_MIN_NM = 1000.0
-MITO_LENGTH_MIN_PX = MITO_LENGTH_MIN_NM / PIXEL_NM   # ≈ 8.3 px
+MITO_LENGTH_MIN_PX = MITO_LENGTH_MIN_NM / PIXEL_NM   # ~ 8.3 px
 TILE          = 128
 OUTPUT_SZ     = 256
 P_DOT         = 0.25
 P_ROD         = 0.45
 
 
-# ── Physics pipeline (inlined from PhysGT_CLSM.py) ───────────────────────────
+# -- Physics pipeline (inlined from PhysGT_CLSM.py) ---------------------------
 
 def _draw_thick_line(canvas, r0, c0, r1, c1, radius_px):
     steps = max(int(math.hypot(r1-r0, c1-c0)) * 2 + 1, 2)
@@ -118,7 +118,7 @@ def simulate_image(fluorophore_map, rng):
     return noisy
 
 
-# ── Tile generator with per-instance GT ──────────────────────────────────────
+# -- Tile generator with per-instance GT --------------------------------------
 
 def make_tile_with_instances(rng, n_mito_range=(1, 5)):
     """
@@ -150,7 +150,7 @@ def make_tile_with_instances(rng, n_mito_range=(1, 5)):
                 fluor_map = place_fluorophores(emitter_mask, rng)
                 sub_img += simulate_image(fluor_map, rng)
                 # Dilate GT by 1 px: raw emitter mask is ~2 px wide, but the
-                # PSF-convolved image (FWHM≈2 px) makes the observable extent ~4 px.
+                # PSF-convolved image (FWHM~2 px) makes the observable extent ~4 px.
                 # Evaluating against the raw mask puts IoU right at the 0.5 boundary.
                 gt_mask = binary_dilation(binary_mask, disk(1))
                 sub_bin  = np.maximum(sub_bin, gt_mask.astype(np.uint8))
@@ -165,7 +165,7 @@ def make_tile_with_instances(rng, n_mito_range=(1, 5)):
     return big_img, big_bin, big_inst
 
 
-# ── Segmentation on numpy array ───────────────────────────────────────────────
+# -- Segmentation on numpy array -----------------------------------------------
 
 def segment_array(image):
     """Runs the PhysGT segmentation pipeline on a float32 numpy array."""
@@ -179,7 +179,7 @@ def segment_array(image):
     binary = binary_closing(smoothed > thresh, disk(1))
 
     dist = distance_transform_edt(binary)
-    # A 2px-wide rod has a flat ridge in the distance transform (max ≈1 px).
+    # A 2px-wide rod has a flat ridge in the distance transform (max ~1 px).
     # Smoothing collapses the ridge into one broad peak so a single rod gets
     # one watershed marker instead of being split every ~min_dist pixels.
     dist_smooth = gaussian_filter(dist, sigma=3.0)
@@ -204,7 +204,7 @@ def segment_array(image):
     return labeled
 
 
-# ── Metrics ───────────────────────────────────────────────────────────────────
+# -- Metrics -------------------------------------------------------------------
 
 def dice_semantic(pred_labels, gt_binary):
     pred_bin = (pred_labels > 0).astype(np.uint8)
@@ -281,7 +281,7 @@ def f1_at_iou(pred_labels, gt_labels, iou_thresh=0.5):
     return (2*tp / denom) if denom > 0 else 0.0
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# -- Main ----------------------------------------------------------------------
 
 if __name__ == '__main__':
     print('=' * 60)
@@ -345,3 +345,5 @@ if __name__ == '__main__':
     with open(txt_path, 'w', encoding='utf-8') as f:
         f.write(summary)
     print(f'Summary saved: {txt_path}')
+
+

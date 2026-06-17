@@ -72,6 +72,8 @@ Run PhysGT-CLSM on the bundled example CLSM tile:
 python PhysGT_CLSM.py --img_dir example_data --out_pred predictions_33/physegt_clsm --out_fig figures/physegt_clsm --out_res results
 ```
 
+This command runs without user interaction and generates an instance-label TIF, a quick-look QC figure, and a CSV summary.
+
 Run synthetic self-validation:
 
 ```bash
@@ -99,3 +101,5 @@ results/                       CSV summaries
 - This release intentionally contains only the code and minimal example materials required to reproduce the PhysGT-CLSM workflow.
 - Draft documents, publication-specific figure scripts, baseline model weights, full raw datasets, and journal-specific materials are not included.
 - The bundled example image is for workflow testing only.
+
+

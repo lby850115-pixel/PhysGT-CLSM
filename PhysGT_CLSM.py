@@ -5,7 +5,7 @@ Adapted from Sekh et al., Nature Machine Intelligence 2021 (DOI: 10.1038/s42256-
 with three contributions for CLSM imaging:
   1. PSF-adaptive pixel calibration (pixel size derived from image statistics)
   2. Distance-transform Watershed instance separation (not in original physeg)
-  3. Annotation-free direct inference — no U-Net weights, no MATLAB, no GPU required
+  3. Annotation-free direct inference - no U-Net weights, no MATLAB, no GPU required
 
 Pipeline:
   Step 1: 3D mitochondria geometry (dot / rod / network)
@@ -31,7 +31,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 warnings.filterwarnings('ignore')
 
-# ── CLI ───────────────────────────────────────────────────────────────────────
+# -- CLI -----------------------------------------------------------------------
 _parser = argparse.ArgumentParser(add_help=False)
 _parser.add_argument('--img_dir',  type=str, default=None,
                      help='Input image directory (default: MITO DATA_1/)')
@@ -42,7 +42,7 @@ _parser.add_argument('--out_fig',  type=str, default=None,
 _parser.add_argument('--out_res',  type=str, default=None,
                      help='Output results directory override')
 _parser.add_argument('--min_area', type=int, default=20,
-                     help='Override minimum instance area (px²)')
+                     help='Override minimum instance area (px2)')
 _parser.add_argument('--smooth_sigma', type=float, default=1.0,
                      help='Gaussian pre-smoothing sigma for real-image inference')
 _parser.add_argument('--threshold_scale', type=float, default=1.35,
@@ -53,10 +53,12 @@ _parser.add_argument('--dist_sigma', type=float, default=1.2,
                      help='Gaussian smoothing sigma for distance-transform markers')
 _parser.add_argument('--min_distance', type=int, default=8,
                      help='Minimum marker distance for watershed instance separation')
+_parser.add_argument('--build_simulation', action='store_true',
+                     help='Build the optional synthetic simulation dataset after real-image inference')
 _parser.add_argument('--help', action='store_true')
 _args, _ = _parser.parse_known_args()
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
+# -- Paths ---------------------------------------------------------------------
 ROOT     = Path(__file__).resolve().parent
 RAW_DIR  = Path(_args.img_dir) if _args.img_dir else ROOT / 'MITO DATA_1'
 OUT_PRED = Path(_args.out_pred) if _args.out_pred else ROOT / 'predictions' / 'physegt_clsm'
@@ -66,28 +68,28 @@ OUT_PRED.mkdir(parents=True, exist_ok=True)
 OUT_FIG.mkdir(parents=True, exist_ok=True)
 OUT_RES.mkdir(parents=True, exist_ok=True)
 
-# ── Microscope parameters (CLSM, HELA cells) ──────────────────────────────────
+# -- Microscope parameters (CLSM, HELA cells) ----------------------------------
 # Pixel size confirmed: 120.25 nm/px (corrected from 78.0)
-PIXEL_NM   = 120.25      # lateral pixel size (nm) — confirmed correct value
+PIXEL_NM   = 120.25      # lateral pixel size (nm) - confirmed correct value
 NA         = 1.2         # numerical aperture
 WAVELENGTH = 488.0       # emission wavelength (nm), blue/488 nm excitation mito channel
-# At 120.25 nm/px: FOV = 1024 × 120.25 nm ≈ 123 µm; Rayleigh σ_psf ≈ 104 nm → 0.87 px
-PSF_SIGMA_NM = 0.61 * WAVELENGTH / NA / 2.355   # FWHM→σ: ≈ 95 nm
-PSF_SIGMA_PX = PSF_SIGMA_NM / PIXEL_NM           # ≈ 1.22 px
+# At 120.25 nm/px: FOV = 1024 x 120.25 nm ~ 123 um; Rayleigh sigma_psf ~ 104 nm -> 0.87 px
+PSF_SIGMA_NM = 0.61 * WAVELENGTH / NA / 2.355   # FWHM->sigma: ~ 95 nm
+PSF_SIGMA_PX = PSF_SIGMA_NM / PIXEL_NM           # ~ 1.22 px
 
 # Noise model for low-SNR live-cell CLSM images.
 READOUT_SIGMA = 8.0
 POISSON_SCALE = 80.0
 
 # Mitochondrion geometry at 120.25 nm/px
-# Single mito: diameter 250 nm ≈ 2.1 px; rod length 1–3 µm ≈ 8–25 px
+# Single mito: diameter 250 nm ~ 2.1 px; rod length 1-3 um ~ 8-25 px
 MITO_DIAM_NM       = 250.0
-MITO_DIAM_PX       = MITO_DIAM_NM / PIXEL_NM        # ≈ 2.08 px
+MITO_DIAM_PX       = MITO_DIAM_NM / PIXEL_NM        # ~ 2.08 px
 MITO_LENGTH_MIN_NM = 1000.0
-MITO_LENGTH_MIN_PX = MITO_LENGTH_MIN_NM / PIXEL_NM  # ≈ 8.3 px
+MITO_LENGTH_MIN_PX = MITO_LENGTH_MIN_NM / PIXEL_NM  # ~ 8.3 px
 
 # Simulation dataset size
-N_TRAIN    = 7000   # training tiles (128×128 → tiled to 256×256)
+N_TRAIN    = 7000   # training tiles (128x128 -> tiled to 256x256)
 N_VAL      = 1000
 N_TEST     = 1000
 TILE       = 128    # internal tile size; final tiles are 256 x 256 2x2 mosaics
@@ -98,7 +100,7 @@ P_DOT     = 0.25
 P_ROD     = 0.45
 P_NETWORK = 0.30
 
-# ── Geometry helpers ───────────────────────────────────────────────────────────
+# -- Geometry helpers -----------------------------------------------------------
 
 def _draw_thick_line(canvas, r0, c0, r1, c1, radius_px):
     """Rasterise a thick line (capsule) onto canvas (in-place, float32)."""
@@ -140,7 +142,7 @@ def make_mito_geometry(shape, mtype, rng):
                         canvas[nr, nc] = 1.0
 
     elif mtype == 'rod':
-        # straight rod, length 3–12× diameter
+        # straight rod, length 3-12x diameter
         length_px = rng.uniform(3*MITO_DIAM_PX, 12*MITO_DIAM_PX)
         angle = rng.uniform(0, math.pi)
         cr = rng.integers(margin+int(length_px//2), H-margin-int(length_px//2))
@@ -150,7 +152,7 @@ def make_mito_geometry(shape, mtype, rng):
         _draw_thick_line(canvas, cr-dr, cc-dc, cr+dr, cc+dc, r_px)
 
     else:  # network
-        # 2–4 connected branches emanating from a junction
+        # 2-4 connected branches emanating from a junction
         n_branches = rng.integers(2, 5)
         cr = rng.integers(margin*2, H-margin*2)
         cc = rng.integers(margin*2, W-margin*2)
@@ -176,11 +178,11 @@ def place_fluorophores(emitter_mask, rng, density=0.6):
     return (emitter_mask * (flip < density)).astype(np.float32)
 
 
-# ── Physics-based GT from emitter projection ─────────────────────────────────
+# -- Physics-based GT from emitter projection ---------------------------------
 
 def physics_gt(emitter_mask):
     """
-    Project emitter positions → lateral plane → max-pool by pixel size → binarise.
+    Project emitter positions -> lateral plane -> max-pool by pixel size -> binarise.
     Because emitters are already on the pixel grid (1 emitter = 1 pixel at most),
     max-pool is a no-op at 1:1 scale; binarisation is the key step.
     This GT is unaffected by PSF or noise.
@@ -188,7 +190,7 @@ def physics_gt(emitter_mask):
     return (emitter_mask > 0).astype(np.uint8)
 
 
-# ── Microscope image simulation (Steps 3–5) ───────────────────────────────────
+# -- Microscope image simulation (Steps 3-5) -----------------------------------
 
 def simulate_image(fluorophore_map, rng):
     """
@@ -206,11 +208,11 @@ def simulate_image(fluorophore_map, rng):
     return noisy
 
 
-# ── Tile generation ───────────────────────────────────────────────────────────
+# -- Tile generation -----------------------------------------------------------
 
 def make_tile(rng, n_mito_range=(1, 5)):
     """
-    Generate one 256×256 tile = 2×2 mosaic of 128×128 sub-tiles.
+    Generate one 256x256 tile = 2x2 mosaic of 128x128 sub-tiles.
     Returns (image_256, gt_256) both float32/uint8.
     """
     big_img = np.zeros((OUTPUT_SZ, OUTPUT_SZ), dtype=np.float32)
@@ -243,13 +245,13 @@ def make_tile(rng, n_mito_range=(1, 5)):
     return big_img, big_gt
 
 
-# ── Build simulation dataset ──────────────────────────────────────────────────
+# -- Build simulation dataset --------------------------------------------------
 
 def build_dataset(split_name, n_tiles, seed):
     out = ROOT / 'data' / 'physeg_sim' / split_name
     out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(seed)
-    print(f'Generating {n_tiles} tiles → {out} ...')
+    print(f'Generating {n_tiles} tiles -> {out} ...')
     for i in range(n_tiles):
         img, gt = make_tile(rng)
         # Normalise image to uint16 for saving
@@ -262,7 +264,7 @@ def build_dataset(split_name, n_tiles, seed):
     print(f'  Done: {n_tiles} tiles saved.')
 
 
-# ── Apply physics-based segmentation to real images ───────────────────────────
+# -- Apply physics-based segmentation to real images ---------------------------
 
 def segment_real_image(fp):
     """
@@ -289,7 +291,7 @@ def segment_real_image(fp):
     mito_norm = np.clip((mito - lo) / (hi - lo + 1e-9), 0, 1)
 
     # Gaussian pre-smooth: suppresses readout noise without broadening 2px structures.
-    # Unsharp masking omitted — PSF is sub-pixel (0.876 px), so it amplifies noise.
+    # Unsharp masking omitted - PSF is sub-pixel (0.876 px), so it amplifies noise.
     smoothed = gaussian_filter(mito_norm, sigma=_args.smooth_sigma)
 
     # Triangle threshold: mitochondria occupy <5% of image area; Otsu underestimates
@@ -301,7 +303,7 @@ def segment_real_image(fp):
 
     dist = distance_transform_edt(binary)
     # Smooth distance transform before peak detection: a 2px-wide rod produces a flat
-    # ridge (max ≈1 px) that yields spurious peaks every min_dist pixels without smoothing.
+    # ridge (max ~1 px) that yields spurious peaks every min_dist pixels without smoothing.
     dist_smooth = gaussian_filter(dist, sigma=_args.dist_sigma)
     # Default P3 working preset balances fragmentation and under-separation.
     min_dist = _args.min_distance
@@ -324,7 +326,7 @@ def segment_real_image(fp):
     return labeled_filt, mito_norm, binary
 
 
-# ── Main: process real images ─────────────────────────────────────────────────
+# -- Main: process real images -------------------------------------------------
 
 FILES = sorted(RAW_DIR.glob('*.tif'))
 NAMES = {
@@ -341,7 +343,7 @@ stats_rows = []
 
 print('='*60)
 print('PhysGT-CLSM: Physics-informed CLSM Mitochondria Segmentation')
-print(f'PSF σ = {PSF_SIGMA_PX:.2f} px  ({PSF_SIGMA_NM:.0f} nm)')
+print(f'PSF sigma = {PSF_SIGMA_PX:.2f} px  ({PSF_SIGMA_NM:.0f} nm)')
 print(f'Pixel size: {PIXEL_NM:.0f} nm/px')
 print('='*60)
 
@@ -373,7 +375,7 @@ for fp in FILES:
     axes[2].imshow(mito_norm, cmap='gray')
     axes[2].imshow(disp, alpha=0.6)
     axes[2].set_title(f'Instances (n={n_inst})'); axes[2].axis('off')
-    plt.suptitle(f'{sname} — PhysGT-CLSM', fontweight='bold')
+    plt.suptitle(f'{sname} - PhysGT-CLSM', fontweight='bold')
     plt.tight_layout()
     fig.savefig(OUT_FIG / f'{sname}_physegt_clsm_overlay.png', dpi=150, bbox_inches='tight')
     plt.close(fig)
@@ -397,18 +399,20 @@ print('-'*40)
 for r in stats_rows:
     print(f'{r["image"]:<6} {r["n_mito"]:>8} {r["area_median"]:>10} {r["area_mean"]:>10}')
 print('='*60)
-print(f'\nInstance TIFs  → {OUT_PRED}')
-print(f'QC figures     → {OUT_FIG}')
-print(f'Stats CSV      → {OUT_RES}/physegt_clsm_stats.csv')
+print(f'\nInstance TIFs  -> {OUT_PRED}')
+print(f'QC figures     -> {OUT_FIG}')
+print(f'Stats CSV      -> {OUT_RES}/physegt_clsm_stats.csv')
 
-# ── Optionally build simulation dataset ──────────────────────────────────────
-print('\n--- Simulation dataset (for U-Net training) ---')
-print(f'Target: {N_TRAIN} train + {N_VAL} val + {N_TEST} test tiles (256×256)')
-ans = input('Build simulation dataset now? [y/N]: ').strip().lower()
+# -- Optionally build simulation dataset --------------------------------------
+print('\n--- Optional synthetic validation dataset ---')
+print(f'Target: {N_TRAIN} train + {N_VAL} val + {N_TEST} test tiles (256x256)')
+ans = 'y' if _args.build_simulation else 'n'
 if ans == 'y':
     build_dataset('train', N_TRAIN, seed=0)
     build_dataset('val',   N_VAL,   seed=1)
     build_dataset('test',  N_TEST,  seed=2)
     print('Simulation dataset complete.')
 else:
-    print('Skipped. Run build_dataset() manually when needed.')
+    print('Skipped. Use --build_simulation to enable synthetic dataset generation.')
+
+

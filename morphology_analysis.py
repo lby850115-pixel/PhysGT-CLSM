@@ -68,7 +68,7 @@ METRICS_NUM = [
     'total_branch_length', 'mean_branch_length', 'median_branch_length', 'std_branch_length',
 ]
 
-# ── Branch-point detection (identical to 03_morphology_modl.py) ───────────────
+# -- Branch-point detection (identical to 03_morphology_modl.py) ---------------
 
 _VALID_BP_SET = {tuple(v) for v in [
     [0,1,0,1,0,0,1,0],[0,0,1,0,1,0,0,1],[1,0,0,1,0,1,0,0],[0,1,0,0,1,0,1,0],
@@ -104,7 +104,7 @@ def get_branch_points(skel_bool):
     return keep
 
 
-# ── Per-instance metric computation ──────────────────────────────────────────
+# -- Per-instance metric computation ------------------------------------------
 
 def instance_metrics(binary_mask, img_name, iid, cell_type, model):
     props  = regionprops(binary_mask.astype(np.uint8))[0]
@@ -130,7 +130,7 @@ def instance_metrics(binary_mask, img_name, iid, cell_type, model):
     crop = binary_mask[r0:r1, c0:c1]
 
     if crop.sum() > 2000:
-        # Too large for thin() — estimate from major axis
+        # Too large for thin() - estimate from major axis
         skel_px   = int(major)
         bp_list   = []
         n_branches = 1
@@ -174,7 +174,7 @@ def instance_metrics(binary_mask, img_name, iid, cell_type, model):
     }
 
 
-# ── Process one model ─────────────────────────────────────────────────────────
+# -- Process one model ---------------------------------------------------------
 
 def process_model(model: str, image_list: list[dict]):
     pred_dir = PRED_DIR / model
@@ -246,7 +246,7 @@ def process_model(model: str, image_list: list[dict]):
     return all_rows, agg_rows
 
 
-# ── Save CSVs ─────────────────────────────────────────────────────────────────
+# -- Save CSVs -----------------------------------------------------------------
 
 def save_csv(rows, path):
     if not rows:
@@ -256,7 +256,7 @@ def save_csv(rows, path):
         w.writeheader(); w.writerows(rows)
 
 
-# ── Per-model summary figure ──────────────────────────────────────────────────
+# -- Per-model summary figure --------------------------------------------------
 
 def make_model_figure(agg_rows, model):
     if not agg_rows:
@@ -293,10 +293,10 @@ def make_model_figure(agg_rows, model):
     fig_path = OUT_FIG / f'{model}_celltype_comparison.png'
     fig.savefig(fig_path, dpi=150, bbox_inches='tight')
     plt.close(fig)
-    print(f'  Figure → {fig_path}')
+    print(f'  Figure -> {fig_path}')
 
 
-# ── Cross-model comparison figure ─────────────────────────────────────────────
+# -- Cross-model comparison figure ---------------------------------------------
 
 def make_crossmodel_figure(combined_agg):
     """Bar chart: key metrics by model, grouped by cell type."""
@@ -343,10 +343,10 @@ def make_crossmodel_figure(combined_agg):
     fig_path = OUT_FIG / 'crossmodel_comparison.png'
     fig.savefig(fig_path, dpi=150, bbox_inches='tight')
     plt.close(fig)
-    print(f'\nCross-model figure → {fig_path}')
+    print(f'\nCross-model figure -> {fig_path}')
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# -- Main ----------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser()
@@ -389,12 +389,14 @@ def main():
     # Combined summary CSV
     if combined_agg:
         save_csv(combined_agg, OUT_RES / 'all_models_summary.csv')
-        print(f'\nCombined summary → {OUT_RES}/all_models_summary.csv')
+        print(f'\nCombined summary -> {OUT_RES}/all_models_summary.csv')
         make_crossmodel_figure(combined_agg)
 
-    print(f'\nAll outputs → {OUT_RES}')
-    print(f'Figures     → {OUT_FIG}')
+    print(f'\nAll outputs -> {OUT_RES}')
+    print(f'Figures     -> {OUT_FIG}')
 
 
 if __name__ == '__main__':
     main()
+
+
