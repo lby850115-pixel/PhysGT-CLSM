@@ -41,7 +41,7 @@ _parser.add_argument('--out_fig',  type=str, default=None,
                      help='Output figures directory override')
 _parser.add_argument('--out_res',  type=str, default=None,
                      help='Output results directory override')
-_parser.add_argument('--min_area', type=int, default=None,
+_parser.add_argument('--min_area', type=int, default=20,
                      help='Override minimum instance area (px²)')
 _parser.add_argument('--smooth_sigma', type=float, default=1.0,
                      help='Gaussian pre-smoothing sigma for real-image inference')
@@ -51,7 +51,7 @@ _parser.add_argument('--close_radius', type=int, default=0,
                      help='Binary closing radius in pixels (0 disables closing)')
 _parser.add_argument('--dist_sigma', type=float, default=1.2,
                      help='Gaussian smoothing sigma for distance-transform markers')
-_parser.add_argument('--min_distance', type=int, default=5,
+_parser.add_argument('--min_distance', type=int, default=8,
                      help='Minimum marker distance for watershed instance separation')
 _parser.add_argument('--build_dataset', action='store_true',
                      help='Build the optional synthetic train/val/test dataset after inference')
@@ -305,8 +305,9 @@ def segment_real_image(fp):
     # Smooth distance transform before peak detection: a 2px-wide rod produces a flat
     # ridge (max ≈1 px) that yields spurious peaks every min_dist pixels without smoothing.
     dist_smooth = gaussian_filter(dist, sigma=_args.dist_sigma)
-    # Real CLSM mitochondria can form dense contact regions. A 5 px marker spacing
-    # improves instance separation while retaining network-scale continuity.
+    # Real CLSM mitochondria can form dense contact regions. The manuscript
+    # working preset uses 8 px marker spacing to balance fragmentation and
+    # under-separation while retaining local branch continuity.
     min_dist = _args.min_distance
     coords = peak_local_max(dist_smooth, min_distance=min_dist, labels=binary)
     markers = np.zeros(binary.shape, dtype=np.int32)
@@ -315,7 +316,7 @@ def segment_real_image(fp):
 
     labeled_ws = watershed(-dist, markers, mask=binary)
 
-    MIN_AREA = _args.min_area if _args.min_area else 10
+    MIN_AREA = _args.min_area
     labeled_filt = np.zeros_like(labeled_ws, dtype=np.uint16)
     new_id = 1
     for iid in range(1, labeled_ws.max() + 1):

@@ -5,6 +5,6 @@ type: software
 authors:
   - family-names: "Author"
     given-names: "Name"
-repository-code: "https://github.com/lby850115/PhysGT-CLSM"
+repository-code: "https://github.com/lby850115-pixel/PhysGT-CLSM"
 license: MIT
 date-released: 2026-06-11

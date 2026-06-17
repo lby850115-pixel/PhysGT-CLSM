@@ -1,78 +1,33 @@
-# Paper 1 Figure Index
+# Manuscript Figure Index
 
-Generated figures for: **Physics-Informed Ground Truth Generation for Annotation-Free Mitochondria Segmentation**
+Generated figures for: **PhysGT-CLSM: a physics-informed framework for annotation-free mitochondrial instance generation and morphology analysis in CLSM images**
 
-Journal target: **Methods** (Elsevier)
+Journal target: **Computer Methods and Programs in Biomedicine (CMPB)**
 
----
+## Scheme 1
 
-## Fig1 Pipeline Overview
+**Description**: Conceptual overview of annotation uncertainty, the PhysGT-CLSM physics-informed pipeline, annotation-free instance segmentation and morphology-based validation.
 
-**Description**: PhysGT-CLSM framework: 6-step physics-informed synthesis pipeline
+## Figure 1. PhysGT-CLSM Pipeline
 
-**Source**: `figures\paper\fig_pipeline.pdf`
+**Description**: PSF-informed foreground, binary mask, distance transform, watershed markers and final instance labels.
 
-**Status**: Available
+## Figure 2. Physics-Guided Parameter Selection
 
----
+**Description**: Parameter-sensitivity curve and working-preset selection for real-image instance separation.
 
-## Fig2 Synthetic Validation
+## Figure 3. Synthetic Self-Validation
 
-**Description**: Synthetic self-validation: accuracy metrics and GT-prediction comparison
+**Description**: Synthetic CLSM examples, Dice/AJI/F1 distributions, instance-count comparison and summary statistics.
 
-**Source**: `figures\paper\figS1_synthetic_validation.pdf`
+## Figure 4. Cross-Model Segmentation Comparison
 
-**Status**: Available
+**Description**: Representative visual comparison between PhysGT-CLSM and five baseline segmentation methods on the same CLSM field and ROI.
 
----
+## Figure 5. Morphology-Level Cross-Model Consistency
 
-## Fig3 Segmentation Overlays
+**Description**: Six representative morphology descriptors across 33 CLSM images and descriptor-level agreement between PhysGT-CLSM and baseline methods.
 
-**Description**: Segmentation overlays: 6 representative images × 6 models (PhysGT-CLSM + 5 baselines)
+## Supplementary Figures
 
-**Source**: `figures\paper\fig1_overlay_grid.pdf`
-
-**Status**: Available
-
----
-
-## Fig4 CrossModel Morphology
-
-**Description**: Cross-model morphology comparison: violin plots for 6 metrics (area, aspect ratio, eccentricity, solidity, tortuosity, thickness)
-
-**Source**: `results\morphology_comparison\fig2_violin_distributions.pdf`
-
-**Status**: Available
-
----
-
-## Fig5 Statistical Significance
-
-**Description**: Statistical significance: Dunn's post-hoc test heatmap (Kruskal-Wallis H-test, BH-corrected p-values)
-
-**Source**: `figures\paper\figS2_stats_heatmap.pdf`
-
-**Status**: Available
-
----
-
-## FigS1 Instance Count
-
-**Description**: Instance count stability: Friedman + Nemenyi test across models
-
-**Source**: `figures\paper\fig4_count_boxplot.pdf`
-
-**Status**: Available
-
----
-
-## FigS2 CellType Comparison
-
-**Description**: Cell-type stratified morphology comparison (HeLa, COS-7, U-2 OS)
-
-**Source**: `figures\morphology_34\crossmodel_comparison.png`
-
-**Status**: Available
-
----
-
+Supplementary figures include full descriptor heatmaps, profile-distance summaries, Bland-Altman-style comparisons and instance-per-cell analyses.

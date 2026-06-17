@@ -14,32 +14,34 @@ This directory documents how the five comparison methods in the manuscript were 
 
 ## Expected Full-Dataset Layout
 
-The 34-image manuscript analysis used the server-side project layout:
+The final manuscript comparison used the curated 33-image CLSM dataset. Server-side runs used the following project layout:
 
 ```text
 /home/zhishi/LBY_CELL/
-├── data/
-│   └── mito_34/
-│       ├── HELA/
-│       ├── BXPC3/
-│       └── MCF7/
-├── checkpoints/
-│   └── mitosegnet/
-│       └── mitosegnet_best.pt
-├── MoDL/
-│   └── model/
-│       └── U-RNet+.hdf5
-├── results/
-└── figures/
+|-- data/
+|   `-- mito_33/
+|       |-- HELA/
+|       |-- BXPC3/
+|       `-- MCF7/
+|-- checkpoints/
+|   `-- mitosegnet/
+|       `-- mitosegnet_best.pt
+|-- MoDL/
+|   `-- model/
+|       `-- U-RNet+.hdf5
+|-- results/
+`-- figures/
 ```
 
 The local single-directory scripts expect:
 
 ```text
-MITO DATA_1/
+MITO DATA/
 ```
 
 as the input folder beside the script.
+
+Note: several wrapper filenames retain an earlier internal `_34` suffix. This suffix is historical and does not change the final 33-image manuscript analysis.
 
 ## Commands Used for Comparison
 

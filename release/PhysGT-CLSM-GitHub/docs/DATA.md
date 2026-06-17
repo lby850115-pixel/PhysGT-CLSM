@@ -15,7 +15,7 @@ This release contains a minimal test dataset for verifying the PhysGT-CLSM code 
 
 ## Full Dataset
 
-The full manuscript evaluation used 34 CLSM images from HeLa, BxPC-3 and MCF-7 cells. The complete raw dataset is not included in this compact GitHub release to avoid accidental redistribution of unpublished microscopy data.
+The final manuscript evaluation used 33 real CLSM mitochondrial images from HeLa, BxPC-3 and MCF-7 cells. The complete raw dataset is not included in this compact GitHub release to avoid accidental redistribution of unpublished microscopy data.
 
 Before publication, deposit the full dataset in an appropriate research data repository or provide an accession link in the manuscript Data Availability statement.
 

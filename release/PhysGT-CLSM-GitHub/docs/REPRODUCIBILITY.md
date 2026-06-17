@@ -8,11 +8,11 @@ conda activate physgt-clsm
 python src/physgt_clsm.py --img_dir data/test_images --out_pred outputs/predictions --out_fig outputs/figures --out_res outputs/results
 ```
 
-The command above uses the balanced real-image preset:
+The command above uses the final manuscript real-image working preset:
 
 ```text
 smooth_sigma=1.0, threshold_scale=1.35, close_radius=0,
-dist_sigma=1.2, min_distance=5, min_area=10
+dist_sigma=1.2, min_distance=8, min_area=20
 ```
 
 Check that the following files are created:
@@ -31,13 +31,13 @@ This regenerates synthetic CLSM-like image-label pairs and reports Dice, AJI and
 
 ## Full Manuscript Workflow
 
-Place the full 34-image dataset in this structure:
+Place the full 33-image dataset in this structure:
 
 ```text
 MITO DATA/
-├── HELA/
-├── BXPC-3/
-└── MCF-7/
+|-- HELA/
+|-- BXPC-3/
+`-- MCF-7/
 ```
 
 Then run:
@@ -49,8 +49,10 @@ python scripts/stats_significance.py
 python scripts/paper_figures.py
 ```
 
+Note: some helper script names retain the earlier internal `_34` suffix, but the final manuscript statistics use the curated 33-image set.
+
 ## Notes
 
 - The implementation is CPU-compatible.
-- The repository does not include trained neural-network weights because PhysGT-CLSM does not require supervised training.
+- PhysGT-CLSM does not require supervised training or redistributed neural-network weights.
 - Some comparison scripts expect baseline prediction folders from Cellpose, MitoSegNet, MoDL, Nellie and Mitometer.

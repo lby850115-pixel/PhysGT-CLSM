@@ -1,18 +1,22 @@
-"""Re-run PhysGT-CLSM on all 34 images with optimized parameters."""
+"""Re-run PhysGT-CLSM on the full manuscript image set.
+
+The filename keeps the earlier internal `_34` suffix, but the final manuscript
+analysis uses the curated 33-image set. The parameters below match the final
+real-image working preset used by `src/physgt_clsm.py`.
+"""
 import math, warnings
 import numpy as np
 import tifffile
 from pathlib import Path
 from scipy.ndimage import gaussian_filter, distance_transform_edt
 from skimage.filters import threshold_triangle
-from skimage.morphology import binary_closing, disk
 from skimage.feature import peak_local_max
 from skimage.segmentation import watershed
 
 warnings.filterwarnings('ignore')
 
-ROOT     = Path(__file__).resolve().parent
-PRED_DIR = ROOT / 'predictions_34' / 'physegt_clsm'
+ROOT     = Path(__file__).resolve().parents[1]
+PRED_DIR = ROOT / 'predictions_33' / 'physegt_clsm'
 PRED_DIR.mkdir(parents=True, exist_ok=True)
 
 IMG_DIRS = {
@@ -41,19 +45,19 @@ def segment(fp):
     lo, hi = np.percentile(mito, [1, 99])
     norm = np.clip((mito - lo) / (hi - lo + 1e-9), 0, 1)
     smoothed = gaussian_filter(norm, sigma=1.0)
-    thresh = threshold_triangle(smoothed)
-    binary = binary_closing(smoothed > thresh, disk(1))
+    thresh = threshold_triangle(smoothed) * 1.35
+    binary = smoothed > thresh
 
     dist = distance_transform_edt(binary)
-    dist_smooth = gaussian_filter(dist, sigma=3.0)
-    min_dist = max(10, int(MITO_LENGTH_MIN_PX * 1.2))
+    dist_smooth = gaussian_filter(dist, sigma=1.2)
+    min_dist = 8
     coords = peak_local_max(dist_smooth, min_distance=min_dist, labels=binary)
     markers = np.zeros(binary.shape, dtype=np.int32)
     for idx, (r, c) in enumerate(coords, start=1):
         markers[r, c] = idx
 
     labeled_ws = watershed(-dist, markers, mask=binary)
-    MIN_AREA = max(20, int(MITO_LENGTH_MIN_PX * MITO_DIAM_PX * 0.5))
+    MIN_AREA = 20
     labeled = np.zeros_like(labeled_ws, dtype=np.uint16)
     new_id = 1
     for iid in range(1, labeled_ws.max() + 1):
@@ -64,10 +68,10 @@ def segment(fp):
 
 
 print('=' * 55)
-print('PhysGT-CLSM re-run (optimized params)')
-print(f'  sigma_smooth=1.0  threshold=triangle')
-print(f'  dist_smooth=3.0   min_dist={max(10, int(MITO_LENGTH_MIN_PX*1.2))} px')
-print(f'  MIN_AREA={max(20, int(MITO_LENGTH_MIN_PX*MITO_DIAM_PX*0.5))} px2')
+print('PhysGT-CLSM re-run (final manuscript working preset)')
+print(f'  sigma_smooth=1.0  threshold=triangle*1.35  close_radius=0')
+print(f'  dist_smooth=1.2   min_dist=8 px')
+print(f'  MIN_AREA=20 px2')
 print('=' * 55)
 
 total = 0
