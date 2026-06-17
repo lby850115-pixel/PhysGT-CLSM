@@ -1,25 +1,25 @@
 """
-08_morphology_34.py
+morphology_analysis.py
 
-Compute 22 morphology metrics for all 34 CLSM images × all available models
-from predictions_34/. Mirrors the metric set in 03_morphology_modl.py exactly,
+Compute 22 morphology metrics for the curated 33 CLSM images x all available models
+from predictions_33/. Mirrors the metric set in 03_morphology_modl.py exactly,
 adding cell_type and model columns.
 
 Input
 -----
-  predictions_34/{model}/{stem}.tif   uint16 instance-label TIFs
+  predictions_33/{model}/{stem}.tif   uint16 instance-label TIFs
 
 Output
 ------
-  results/morphology_34/{model}_per_instance.csv
-  results/morphology_34/{model}_summary.csv
-  results/morphology_34/all_models_summary.csv   (combined, for cross-model stats)
-  figures/morphology_34/{model}_*.png
+  results/morphology_33/{model}_per_instance.csv
+  results/morphology_33/{model}_summary.csv
+  results/morphology_33/all_models_summary.csv   (combined, for cross-model stats)
+  figures/morphology_33/{model}_*.png
 
 Usage
 -----
-  python 08_morphology_34.py
-  python 08_morphology_34.py --models nellie mitometer
+  python morphology_analysis.py
+  python morphology_analysis.py --models nellie mitometer
 """
 
 from __future__ import annotations
@@ -37,9 +37,9 @@ from skimage.measure import regionprops
 warnings.filterwarnings('ignore')
 
 ROOT     = Path(__file__).resolve().parent
-PRED_DIR = ROOT / 'predictions_34'
-OUT_RES  = ROOT / 'results'  / 'morphology_34'
-OUT_FIG  = ROOT / 'figures'  / 'morphology_34'
+PRED_DIR = ROOT / 'predictions_33'
+OUT_RES  = ROOT / 'results'  / 'morphology_33'
+OUT_FIG  = ROOT / 'figures'  / 'morphology_33'
 OUT_RES.mkdir(parents=True, exist_ok=True)
 OUT_FIG.mkdir(parents=True, exist_ok=True)
 
@@ -179,7 +179,7 @@ def instance_metrics(binary_mask, img_name, iid, cell_type, model):
 def process_model(model: str, image_list: list[dict]):
     pred_dir = PRED_DIR / model
     if not pred_dir.exists():
-        print(f'[SKIP] predictions_34/{model}/ not found.')
+        print(f'[SKIP] predictions_33/{model}/ not found.')
         return [], []
 
     all_rows, agg_rows = [], []
@@ -271,7 +271,7 @@ def make_model_figure(agg_rows, model):
         ('thickness',    'Thickness (px)', 'Thickness'),
     ]
     fig, axes = plt.subplots(2, 3, figsize=(14, 8))
-    fig.suptitle(f'{MODEL_LABELS[model]} — Morphology across 34 images',
+    fig.suptitle(f'{MODEL_LABELS[model]} - Morphology across 33 images',
                  fontsize=13, fontweight='bold')
     for ax, (col, ylabel, title) in zip(axes.flat, metrics_to_plot):
         by_ct = {ct: [] for ct in ['HELA', 'BXPC3', 'MCF7']}
@@ -312,7 +312,7 @@ def make_crossmodel_figure(combined_agg):
         return
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle('Cross-model morphology comparison (all 34 images)',
+    fig.suptitle('Cross-model morphology comparison (33 images)',
                  fontsize=13, fontweight='bold')
     colors = plt.cm.get_cmap('tab10', n_models)
     x = np.arange(n_models)
@@ -379,7 +379,7 @@ def main():
         # Save per-model CSVs
         save_csv(all_rows, OUT_RES / f'{model}_per_instance.csv')
         save_csv(agg_rows, OUT_RES / f'{model}_summary.csv')
-        print(f'  CSVs → results/morphology_34/{model}_*.csv')
+        print(f'  CSVs -> results/morphology_33/{model}_*.csv')
 
         make_model_figure(agg_rows, model)
 

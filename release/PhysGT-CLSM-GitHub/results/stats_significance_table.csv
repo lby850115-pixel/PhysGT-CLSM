@@ -1,6 +1,0 @@
-comparison,Area (px2),Aspect Ratio,Eccentricity,Solidity,Tortuosity,Thickness (px)
-PhysGT vs Cellpose,*** (2.18e-26),*** (5.09e-10),*** (5.41e-10),*** (3.48e-15),*** (1.66e-15),*** (1.94e-11)
-PhysGT vs MitoSegNet,ns (4.47e-01),ns (8.61e-01),ns (7.64e-01),ns (9.04e-01),* (3.81e-02),*** (3.36e-20)
-PhysGT vs MoDL,*** (8.82e-11),** (1.81e-03),* (1.77e-02),*** (6.13e-05),*** (4.46e-04),*** (4.24e-05)
-PhysGT vs Nellie,*** (5.10e-11),*** (1.97e-06),*** (3.44e-07),*** (2.04e-04),ns (3.65e-01),*** (2.90e-31)
-PhysGT vs Mitometer,*** (3.40e-07),ns (2.47e-01),ns (7.44e-01),*** (8.31e-06),*** (1.04e-08),** (1.52e-03)

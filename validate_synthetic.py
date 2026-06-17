@@ -12,7 +12,7 @@ input() call that runs when that file is imported.
 
 Output:
   results/synthetic_validation.csv          per-tile metrics
-  results/synthetic_validation_summary.txt  mean ± SD table for paper
+  results/synthetic_validation_summary.txt  mean ± SD validation summary
 """
 
 import math, csv, warnings
