@@ -34,7 +34,7 @@ warnings.filterwarnings('ignore')
 # -- CLI -----------------------------------------------------------------------
 _parser = argparse.ArgumentParser(add_help=False)
 _parser.add_argument('--img_dir',  type=str, default=None,
-                     help='Input image directory (default: MITO DATA_1/)')
+                     help='Input image directory (default: example_data/)')
 _parser.add_argument('--out_pred', type=str, default=None,
                      help='Output predictions directory override')
 _parser.add_argument('--out_fig',  type=str, default=None,
@@ -43,12 +43,6 @@ _parser.add_argument('--out_res',  type=str, default=None,
                      help='Output results directory override')
 _parser.add_argument('--min_area', type=int, default=20,
                      help='Override minimum instance area (px2)')
-_parser.add_argument('--smooth_sigma', type=float, default=1.0,
-                     help='Gaussian pre-smoothing sigma for real-image inference')
-_parser.add_argument('--threshold_scale', type=float, default=1.35,
-                     help='Multiplier applied to the Triangle threshold')
-_parser.add_argument('--close_radius', type=int, default=0,
-                     help='Binary closing radius in pixels (0 disables closing)')
 _parser.add_argument('--dist_sigma', type=float, default=1.2,
                      help='Gaussian smoothing sigma for distance-transform markers')
 _parser.add_argument('--min_distance', type=int, default=8,
@@ -60,7 +54,7 @@ _args, _ = _parser.parse_known_args()
 
 # -- Paths ---------------------------------------------------------------------
 ROOT     = Path(__file__).resolve().parent
-RAW_DIR  = Path(_args.img_dir) if _args.img_dir else ROOT / 'MITO DATA_1'
+RAW_DIR  = Path(_args.img_dir) if _args.img_dir else ROOT / 'example_data'
 OUT_PRED = Path(_args.out_pred) if _args.out_pred else ROOT / 'predictions' / 'physegt_clsm'
 OUT_FIG  = Path(_args.out_fig)  if _args.out_fig  else ROOT / 'figures'     / 'physegt_clsm'
 OUT_RES  = Path(_args.out_res)  if _args.out_res  else ROOT / 'results'
@@ -73,9 +67,9 @@ OUT_RES.mkdir(parents=True, exist_ok=True)
 PIXEL_NM   = 120.25      # lateral pixel size (nm) - confirmed correct value
 NA         = 1.2         # numerical aperture
 WAVELENGTH = 488.0       # emission wavelength (nm), blue/488 nm excitation mito channel
-# At 120.25 nm/px: FOV = 1024 x 120.25 nm ~ 123 um; Rayleigh sigma_psf ~ 104 nm -> 0.87 px
-PSF_SIGMA_NM = 0.61 * WAVELENGTH / NA / 2.355   # FWHM->sigma: ~ 95 nm
-PSF_SIGMA_PX = PSF_SIGMA_NM / PIXEL_NM           # ~ 1.22 px
+# At 120.25 nm/px: FOV = 1024 x 120.25 nm ~ 123 um.
+PSF_SIGMA_NM = 0.61 * WAVELENGTH / NA / 2.355   # 105.3 nm
+PSF_SIGMA_PX = PSF_SIGMA_NM / PIXEL_NM          # 0.876 px
 
 # Noise model for low-SNR live-cell CLSM images.
 READOUT_SIGMA = 8.0
@@ -269,9 +263,10 @@ def build_dataset(split_name, n_tiles, seed):
 def segment_real_image(fp):
     """
     Physics-based instance segmentation of a real CLSM mitochondria image.
-    Parameters validated against synthetic self-validation (Dice=0.847, AJI=0.650).
+    Implements the frozen P3 real-image protocol used for the manuscript figures
+    and the curated 33-image morphology analysis.
     """
-    from skimage.filters import threshold_triangle
+    from skimage.filters import threshold_otsu
     from skimage.segmentation import watershed
     from skimage.feature import peak_local_max
     from skimage.morphology import binary_closing, disk
@@ -280,26 +275,22 @@ def segment_real_image(fp):
     raw = tifffile.imread(fp)
     if raw.ndim == 2:
         mito = raw.astype(np.float32)
+    elif raw.ndim == 3 and raw.shape[-1] <= 4:
+        ch_means = [raw[..., i].mean() for i in range(raw.shape[-1])]
+        mito = raw[..., int(np.argmax(ch_means))].astype(np.float32)
     elif raw.ndim == 3:
-        ch_means = [raw[:, :, i].mean() for i in range(raw.shape[2])]
-        best_ch = int(np.argmax(ch_means))
-        mito = raw[:, :, best_ch].astype(np.float32)
+        ch_means = [raw[i].mean() for i in range(raw.shape[0])]
+        mito = raw[int(np.argmax(ch_means))].astype(np.float32)
     else:
-        mito = raw[..., 1].astype(np.float32)
+        mito = raw.squeeze().astype(np.float32)
 
     lo, hi = np.percentile(mito, [1, 99])
     mito_norm = np.clip((mito - lo) / (hi - lo + 1e-9), 0, 1)
 
-    # Gaussian pre-smooth: suppresses readout noise without broadening 2px structures.
-    # Unsharp masking omitted - PSF is sub-pixel (0.876 px), so it amplifies noise.
-    smoothed = gaussian_filter(mito_norm, sigma=_args.smooth_sigma)
-
-    # Triangle threshold: mitochondria occupy <5% of image area; Otsu underestimates
-    # the threshold for such sparse foregrounds.
-    thresh = threshold_triangle(smoothed) * _args.threshold_scale
-    binary = smoothed > thresh
-    if _args.close_radius > 0:
-        binary = binary_closing(binary, disk(_args.close_radius))
+    # P3 foreground stage: compensate PSF blur, then use Otsu and one-pixel closing.
+    blurred = gaussian_filter(mito_norm, sigma=PSF_SIGMA_PX)
+    foreground = np.clip(mito_norm + 0.8 * (mito_norm - blurred), 0, 1)
+    binary = binary_closing(foreground > threshold_otsu(foreground), disk(1))
 
     dist = distance_transform_edt(binary)
     # Smooth distance transform before peak detection: a 2px-wide rod produces a flat
@@ -328,7 +319,7 @@ def segment_real_image(fp):
 
 # -- Main: process real images -------------------------------------------------
 
-FILES = sorted(RAW_DIR.glob('*.tif'))
+FILES = sorted(RAW_DIR.rglob('*.tif'))
 NAMES = {
     'Series086': 'S086', 'Series090': 'S090', 'Series095': 'S095',
     'Series099': 'S099', 'Series103': 'S103', 'Series109': 'S109',
@@ -338,6 +329,11 @@ def short_name(fp):
     for k, v in NAMES.items():
         if fp.stem.startswith(k): return v
     return fp.stem[:6]
+
+if not RAW_DIR.exists():
+    raise SystemExit(f'Input directory not found: {RAW_DIR}')
+if not FILES:
+    raise SystemExit(f'No TIF images found under: {RAW_DIR}')
 
 stats_rows = []
 
@@ -363,7 +359,7 @@ for fp in FILES:
     # Save 3-panel QC figure
     fig, axes = plt.subplots(1, 3, figsize=(12, 4))
     axes[0].imshow(mito_norm, cmap='gray'); axes[0].set_title('Raw (norm)'); axes[0].axis('off')
-    axes[1].imshow(binary,   cmap='gray'); axes[1].set_title('Physics binary (PSF-eroded)'); axes[1].axis('off')
+    axes[1].imshow(binary,   cmap='gray'); axes[1].set_title('P3 foreground mask'); axes[1].axis('off')
     from matplotlib.colors import ListedColormap
     import matplotlib.cm as cm
     cmap_rand = cm.get_cmap('tab20', max(n_inst, 1))

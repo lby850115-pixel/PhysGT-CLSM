@@ -106,7 +106,7 @@ def get_branch_points(skel_bool):
 
 # -- Per-instance metric computation ------------------------------------------
 
-def instance_metrics(binary_mask, img_name, iid, cell_type, model):
+def instance_metrics(binary_mask, img_name, iid, cell_type, model, border_padding=((1, 1), (1, 1))):
     props  = regionprops(binary_mask.astype(np.uint8))[0]
     area   = props.area
     perim  = props.perimeter
@@ -118,8 +118,12 @@ def instance_metrics(binary_mask, img_name, iid, cell_type, model):
     inertia_mid = float(eigs[min(1, len(eigs)-1)])
     inertia_max = float(eigs[-1])
     aspect_ratio = float(major / minor) if minor > 0 else float(major)
-    thickness    = float(distance_transform_edt(binary_mask)[binary_mask].mean()) \
-                   if binary_mask.any() else 0.0
+    padded_mask = np.pad(binary_mask, border_padding, mode='constant', constant_values=False)
+    top, left = border_padding[0][0], border_padding[1][0]
+    local_distance = distance_transform_edt(padded_mask)[
+        top:top + binary_mask.shape[0], left:left + binary_mask.shape[1]
+    ]
+    thickness = float(local_distance[binary_mask].mean()) if binary_mask.any() else 0.0
     form_factor  = (perim**2 / area) / (4 * np.pi) if area > 0 else 0.0
     roundness    = (4 / np.pi) * area / (major**2)  if major > 0 else 0.0
 
@@ -203,7 +207,8 @@ def process_model(model: str, image_list: list[dict]):
         n_inst = int(inst.max())
         per_inst = []
 
-        ids = list(range(1, n_inst + 1))
+        props_by_id = {prop.label: prop for prop in regionprops(inst)}
+        ids = sorted(props_by_id)
         # Sample up to 300 instances for morphology metrics (computational efficiency)
         # but record the true total count in n_mito
         sampled = False
@@ -213,11 +218,18 @@ def process_model(model: str, image_list: list[dict]):
             sampled = True
 
         for iid in ids:
-            bm = (inst == iid)
-            if bm.sum() <= 16:
+            bm = props_by_id[iid].image
+            if props_by_id[iid].area <= 16:
                 continue
             try:
-                m = instance_metrics(bm, stem, iid, cell_type, model)
+                minr, minc, maxr, maxc = props_by_id[iid].bbox
+                border_padding = (
+                    (0 if minr == 0 else 1, 0 if maxr == inst.shape[0] else 1),
+                    (0 if minc == 0 else 1, 0 if maxc == inst.shape[1] else 1),
+                )
+                m = instance_metrics(
+                    bm, stem, iid, cell_type, model, border_padding=border_padding
+                )
                 per_inst.append(m)
                 all_rows.append(m)
             except Exception as e:
@@ -349,23 +361,53 @@ def make_crossmodel_figure(combined_agg):
 # -- Main ----------------------------------------------------------------------
 
 def main():
+    global PRED_DIR, OUT_RES, OUT_FIG
     parser = argparse.ArgumentParser()
-    parser.add_argument('--models', nargs='+', default=None,
-                        choices=ALL_MODELS, help='Models to process (default: all available)')
+    parser.add_argument('--models', nargs='+', default=None, choices=ALL_MODELS,
+                        help='Models to process (default: all available)')
+    parser.add_argument('--manifest', default=str(ROOT / 'configs' / 'manuscript_33.csv'),
+                        help='CSV with filename and cell_type columns')
+    parser.add_argument('--pred-dir', default=str(PRED_DIR),
+                        help='Directory containing one subdirectory per model')
+    parser.add_argument('--out-res', default=str(OUT_RES), help='CSV output directory')
+    parser.add_argument('--out-fig', default=str(OUT_FIG), help='Figure output directory')
     args = parser.parse_args()
 
-    # Build image list with cell type
-    image_list = []
-    for cell_type, img_dir in IMG_DIRS.items():
-        if not img_dir.exists():
-            continue
-        for fp in sorted(img_dir.glob('*.tif')):
-            image_list.append({'stem': fp.stem, 'cell_type': cell_type})
+    PRED_DIR = Path(args.pred_dir)
+    OUT_RES = Path(args.out_res)
+    OUT_FIG = Path(args.out_fig)
+    OUT_RES.mkdir(parents=True, exist_ok=True)
+    OUT_FIG.mkdir(parents=True, exist_ok=True)
+
+    manifest = Path(args.manifest)
+    if not manifest.exists():
+        raise SystemExit(f'Manifest not found: {manifest}')
+    with open(manifest, newline='', encoding='utf-8') as f:
+        records = list(csv.DictReader(f))
+    required = {'filename', 'cell_type'}
+    if not records or not required.issubset(records[0]):
+        raise SystemExit('Manifest must contain filename and cell_type columns.')
+    if manifest.name == 'manuscript_33.csv' and len(records) != 33:
+        raise SystemExit(f'Manuscript manifest must contain 33 images; found {len(records)}.')
+    image_list = [
+        {'stem': Path(r['filename']).stem, 'cell_type': r['cell_type']}
+        for r in records
+    ]
+    if len({r['stem'] for r in image_list}) != len(image_list):
+        raise SystemExit('Manifest contains duplicate image stems.')
     print(f'Total images: {len(image_list)}')
 
     models_to_run = args.models or [
         m for m in ALL_MODELS if (PRED_DIR / m).exists()
     ]
+    if not models_to_run:
+        raise SystemExit(f'No model prediction directories found under: {PRED_DIR}')
+    for model in models_to_run:
+        missing = [r['stem'] for r in image_list if not (PRED_DIR / model / f"{r['stem']}.tif").exists()]
+        if missing:
+            raise SystemExit(
+                f'{model}: missing {len(missing)} of {len(image_list)} predictions; first missing: {missing[0]}'
+            )
     print(f'Models: {models_to_run}')
 
     combined_per_inst = []

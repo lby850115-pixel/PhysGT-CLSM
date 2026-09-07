@@ -1,0 +1,10 @@
+name: physgt-clsm
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy=1.26.4
+  - scipy=1.17.1
+  - scikit-image=0.26.0
+  - tifffile=2026.3.3
+  - matplotlib=3.10.9

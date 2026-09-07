@@ -1,0 +1,8 @@
+{
+  "input": "example_data/raw_CLSM.tif",
+  "input_sha256": "56f908264fa63207a983f5412991db23e79c79c64b2bc615ec7afe88ec7f32df",
+  "n_instances": 29,
+  "median_area_px": 207,
+  "mean_area_px": 266,
+  "foreground_sha256": "2df297d311b3a7ff98bd204b7081a592c9bf0e77c7cfe67c758f5cd0ebb0816f"
+}

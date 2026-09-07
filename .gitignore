@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+MITO DATA*/
+data/physeg_sim/
+predictions*/
+results/*
+!reference_results/
+figures/physegt_clsm/
+*.docx
+*.pdf
+*.ai
+*.zip
